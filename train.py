@@ -48,10 +48,11 @@ class ByteRCNNTrainer:
 
         model = self._get_model()
 
+        checkpoint_filepath = os.path.join(self.output, "best_model.keras")
         history = model.fit(
             train_generator, batch_size=self.batch_size, epochs=self.epochs, validation_data=val_generator,
             callbacks=[
-                keras.callbacks.ModelCheckpoint(self.output + "best_model2_", save_best_only=True)
+                keras.callbacks.ModelCheckpoint(checkpoint_filepath, save_best_only=True)
             ]
         )
 
@@ -131,7 +132,11 @@ def main():
     train_parser.add_argument('--output', type=str, default='mammad/', help='Output directory')
     train_parser.add_argument('--train_data_path', type=str, required=True, help='Path to training data')
     train_parser.add_argument('--val_data_path', type=str, required=True, help='Path to validation data')
+    train_parser.add_argument('--test_data_path', type=str, default=None, help='Path to test data')
+    train_parser.add_argument('--olab_data_path', type=str, default=None, help='Path to olab data')
+
     train_parser.add_argument('--model_type', type=str, default='byte_rcnn', help='Type of model to use')
+    train_parser.add_argument('--model_path', type=str, default=None, help='Path to the saved model')
 
     eval_parser = subparsers.add_parser('evaluate')
     eval_parser.add_argument('--scenario_to_run', type=int, default=1, help='Scenario to run')
