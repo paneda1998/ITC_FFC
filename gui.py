@@ -1,6 +1,8 @@
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, scrolledtext
 import subprocess
+import threading
+
 
 class ByteRCNNGUI:
     def __init__(self, root):
@@ -100,6 +102,10 @@ class ByteRCNNGUI:
         tk.Button(self.root, text="Evaluate", command=self.evaluate).grid(row=16, column=1, sticky=tk.EW)
         tk.Button(self.root, text="Test", command=self.test).grid(row=16, column=2, sticky=tk.EW)
 
+        # Output console
+        self.output_console = scrolledtext.ScrolledText(self.root, wrap=tk.WORD, width=100, height=20)
+        self.output_console.grid(row=17, column=0, columnspan=3, sticky=tk.EW)
+
     def browse_train_data(self):
         self.train_data_path.set(filedialog.askopenfilename())
 
@@ -117,7 +123,7 @@ class ByteRCNNGUI:
 
     def train(self):
         command = [
-            'python', 'train.py', 'train',
+            '/Users/alireza/Desktop/tez/project/ITC_FFC/.venv/bin/python', 'train.py', 'train',
             '--model_type', self.model_type.get(),
             '--scenario_to_run', str(self.scenario_to_run.get()),
             '--maxlen', str(self.maxlen.get()),
@@ -130,13 +136,14 @@ class ByteRCNNGUI:
             '--epochs', str(self.epochs.get()),
             '--output', self.output.get(),
             '--train_data_path', self.train_data_path.get(),
-            '--val_data_path', self.val_data_path.get()
+            '--val_data_path', self.val_data_path.get(),
+            '--test_data_path', self.test_data_path.get()
         ]
         self.run_command(command)
 
     def evaluate(self):
         command = [
-            'python', 'train.py', 'evaluate',
+            '/Users/alireza/Desktop/tez/project/ITC_FFC/.venv/bin/python', 'train.py', 'evaluate',
             '--model_type', self.model_type.get(),
             '--scenario_to_run', str(self.scenario_to_run.get()),
             '--maxlen', str(self.maxlen.get()),
@@ -149,7 +156,7 @@ class ByteRCNNGUI:
 
     def test(self):
         command = [
-            'python', 'train.py', 'test',
+            '/Users/alireza/Desktop/tez/project/ITC_FFC/.venv/bin/python', 'train.py', 'test',
             '--model_type', self.model_type.get(),
             '--scenario_to_run', str(self.scenario_to_run.get()),
             '--maxlen', str(self.maxlen.get()),
@@ -161,11 +168,25 @@ class ByteRCNNGUI:
         self.run_command(command)
 
     def run_command(self, command):
-        try:
-            result = subprocess.run(command, check=True, capture_output=True, text=True)
-            messagebox.showinfo("Success", result.stdout)
-        except subprocess.CalledProcessError as e:
-            messagebox.showerror("Error", e.stderr)
+        def target():
+            process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            for line in iter(process.stdout.readline, ''):
+                self.output_console.insert(tk.END, line)
+                self.output_console.see(tk.END)
+            process.stdout.close()
+            process.wait()
+            for line in iter(process.stderr.readline, ''):
+                self.output_console.insert(tk.END, line)
+                self.output_console.see(tk.END)
+            process.stderr.close()
+            if process.returncode == 0:
+                messagebox.showinfo("Success", "Command executed successfully")
+            else:
+                messagebox.showerror("Error", f"Command failed with return code {process.returncode}")
+
+        thread = threading.Thread(target=target)
+        thread.start()
+
 
 if __name__ == "__main__":
     root = tk.Tk()

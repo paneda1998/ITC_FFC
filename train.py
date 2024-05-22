@@ -28,7 +28,7 @@ class ByteRCNNTrainer:
         self.val_data_path = args.val_data_path
         self.test_data_path = args.test_data_path
         self.olab_data_path = args.olab_data_path
-        self.model_path = args.model_path
+        self.model_path = self.output + "/best_model.keras"
         self.model_type = args.model_type
         self._create_output_dir()
 
