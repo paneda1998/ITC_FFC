@@ -28,8 +28,8 @@ This project implements a Byte-level Recurrent Convolutional Neural Network (Byt
 
 1. Clone the repository:
    ```sh
-   git clone https://github.com/yourusername/bytercnn.git
-   cd bytercnn
+   https://github.com/paneda1998/ITC_FFC.git
+   cd ITC_FFC
    ```
 
 2. Install the required packages:
@@ -45,7 +45,7 @@ simply run:
 python gui.py
 ```
 
-Or you can run everything mannually
+Or you can run everything manually
 ### Training
 
 To train the ByteRCNN model, use the \`train\` command. You need to specify the paths to your training and validation datasets, along with other hyperparameters.
@@ -63,6 +63,7 @@ python train.py train \
   --cnn_size 128 \
   --rnn_size 64 \
   --epochs 30 \
+  --model_type "byte_rcnn"\
   --output "output_directory/"
 ```
 
@@ -76,6 +77,7 @@ python train.py evaluate \
   --scenario_to_run 1 \
   --maxlen 4096 \
   --batch_size 200 \
+  --model_type "byte_rcnn"\
   --output "output_directory/" \
   --model_path "path/to/saved_model"
 ```
@@ -90,6 +92,7 @@ python train.py test \
   --scenario_to_run 1 \
   --maxlen 4096 \
   --batch_size 200 \
+  --model_type "byte_rcnn"\
   --output "output_directory/" \
   --model_path "path/to/saved_model"
 ```
@@ -119,10 +122,3 @@ Main script to handle training, evaluation, and testing of the ByteRCNN model.
 ### utility.py
 Includes utility functions such as converting data formats and calculating accuracy.
 
-## License
-
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-
----
-
-Feel free to modify this README to better suit your project's specifics. If you have any questions or run into issues, please open an issue on the GitHub repository. Happy coding!
