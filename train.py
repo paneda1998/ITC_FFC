@@ -3,33 +3,35 @@ import json
 import argparse
 import pandas as pd
 from tensorflow import keras
-from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, f1_score, precision_score, recall_score
+from sklearn.metrics import classification_report, confusion_matrix
 import matplotlib.pyplot as plt
 import numpy as np
 import h5py
 
 from bytercnn_models import byte_rcnn_model, load_model
 from data_loader import ByteRCNNDataLoader, NPZBatchGenerator
+from sklearn_models import decision_tree_model, random_forest_model, simple_cnn_model
 from utility import acc_calc
+from config_parser import parse_config
 
-class ByteRCNNTrainer:
+class ModelTrainer:
     def __init__(self, args):
-        self.scenario_to_run = args.scenario_to_run
-        self.maxlen = args.maxlen
-        self.lr = args.lr
-        self.embed_dim = args.embed_dim
-        self.batch_size = args.batch_size
-        self.kernels = args.kernels
-        self.cnn_size = args.cnn_size
-        self.rnn_size = args.rnn_size
-        self.epochs = args.epochs
-        self.output = args.output
-        self.train_data_path = args.train_data_path
-        self.val_data_path = args.val_data_path
-        self.test_data_path = args.test_data_path
-        self.olab_data_path = args.olab_data_path
-        self.model_path = self.output + "/best_model.keras"
-        self.model_type = args.model_type
+        config = parse_config(args.config)
+        self.scenario_to_run = config['scenario_to_run']
+        self.maxlen = config['maxlen']
+        self.lr = config['lr']
+        self.embed_dim = config['embed_dim']
+        self.batch_size = config['batch_size']
+        self.kernels = config['kernels']
+        self.cnn_size = config['cnn_size']
+        self.rnn_size = config['rnn_size']
+        self.epochs = config['epochs']
+        self.output = config['output']
+        self.train_data_path = config['train_data_path']
+        self.val_data_path = config['val_data_path']
+        self.test_data_path = config['test_data_path']
+        self.olab_data_path = config['olab_data_path']
+        self.model_type = config['model_type']
         self._create_output_dir()
 
     def _create_output_dir(self):
@@ -38,7 +40,26 @@ class ByteRCNNTrainer:
 
     def _get_model(self):
         if self.model_type == 'byte_rcnn':
-            return byte_rcnn_model(self.maxlen, self.embed_dim, self.rnn_size, self.cnn_size, self.kernels, 75, self.output, self.lr)
+            return byte_rcnn_model(self.maxlen, self.embed_dim, self.rnn_size, self.cnn_size, self.kernels, 75,
+                                   self.output, self.lr)
+        elif self.model_type == 'decision_tree':
+            return DecisionTreeClassifier(
+                criterion=self.args.criterion,
+                splitter=self.args.splitter,
+                max_depth=self.args.max_depth,
+                min_samples_split=self.args.min_samples_split,
+                min_samples_leaf=self.args.min_samples_leaf
+            )
+        elif self.model_type == 'random_forest':
+            return RandomForestClassifier(
+                n_estimators=self.args.n_estimators,
+                criterion=self.args.criterion,
+                max_depth=self.args.max_depth,
+                min_samples_split=self.args.min_samples_split,
+                min_samples_leaf=self.args.min_samples_leaf
+            )
+        elif self.model_type == 'simple_cnn':
+            return simple_cnn_model((self.maxlen, self.embed_dim, 1), 75)
         else:
             raise ValueError(f"Unsupported model type: {self.model_type}")
 
@@ -48,15 +69,26 @@ class ByteRCNNTrainer:
 
         model = self._get_model()
 
-        checkpoint_filepath = os.path.join(self.output, "best_model.keras")
-        history = model.fit(
-            train_generator, batch_size=self.batch_size, epochs=self.epochs, validation_data=val_generator,
-            callbacks=[
-                keras.callbacks.ModelCheckpoint(checkpoint_filepath, save_best_only=True)
-            ]
-        )
+        if self.model_type in ['byte_rcnn', 'simple_cnn']:
+            checkpoint_filepath = os.path.join(self.output, "best_model.keras")
+            history = model.fit(
+                train_generator, batch_size=self.batch_size, epochs=self.epochs, validation_data=val_generator,
+                callbacks=[
+                    keras.callbacks.ModelCheckpoint(checkpoint_filepath, save_best_only=True)
+                ]
+            )
+            self._plot_history(history)
+        else:
+            x_train, y_train = train_generator[0]  # Assuming data fits into memory
+            x_val, y_val = val_generator[0]
 
-        self._plot_history(history)
+            model = self._get_model()
+            model.fit(x_train, y_train)
+
+            # Evaluate on validation data
+            y_pred = model.predict(x_val)
+            print(classification_report(y_val, y_pred))
+
         self._save_model(model)
         return model
 
@@ -64,13 +96,13 @@ class ByteRCNNTrainer:
         plt.plot(history.history['accuracy'], label='train')
         plt.plot(history.history['val_accuracy'], label='test')
         plt.legend()
-        plt.savefig(self.output + 'train_hist_acc_rcnn.png', dpi=400)
+        plt.savefig(self.output + 'train_hist_acc.png', dpi=400)
         plt.clf()
 
         plt.plot(history.history['loss'], label='train')
         plt.plot(history.history['val_loss'], label='test')
         plt.legend()
-        plt.savefig(self.output + 'train_hist_loss_rcnn.png', dpi=400)
+        plt.savefig(self.output + 'train_hist_loss.png', dpi=400)
         plt.clf()
 
     def evaluate(self):
@@ -100,7 +132,7 @@ class ByteRCNNTrainer:
     def _save_classification_report(self, y_test, y_pred, labels_val, suffix=""):
         report = classification_report(y_test, y_pred, target_names=labels_val, output_dict=True)
         clas_report = pd.DataFrame(report).transpose()
-        clas_report.to_excel(self.output + f'classification_report_bytercnn{suffix}.xlsx')
+        clas_report.to_excel(self.output + f'classification_report{suffix}.xlsx')
 
     def _save_confusion_matrix(self, y_test, y_pred, labels_val, suffix=""):
         conf_matrix = confusion_matrix(y_test, y_pred, labels=labels_val)
@@ -110,53 +142,27 @@ class ByteRCNNTrainer:
 
         conf_matrix_df = pd.DataFrame(conf_matrix)
         conf_matrix_df['acc'] = conf_matrix_df.apply(lambda row: acc_calc(row), axis=1)
-        conf_matrix_df.to_excel(self.output + f'bytercnn_confusion_matrix{suffix}.xlsx')
+        conf_matrix_df.to_excel(self.output + f'confusion_matrix{suffix}.xlsx')
 
     def _save_model(self, model):
-        model.save(self.output + f'_bytercnn_len{self.maxlen}_sc{self.scenario_to_run}_model_save')
+        model.save(self.output + f'_model_len{self.maxlen}_sc{self.scenario_to_run}_model_save')
 
 def main():
-    parser = argparse.ArgumentParser(description="Train, Evaluate, or Test ByteRCNN Model")
+    parser = argparse.ArgumentParser(description="Train, Evaluate, or Test Model")
     subparsers = parser.add_subparsers(dest='command')
 
     train_parser = subparsers.add_parser('train')
-    train_parser.add_argument('--scenario_to_run', type=int, default=1, help='Scenario to run')
-    train_parser.add_argument('--maxlen', type=int, default=4096, help='Maximum length')
-    train_parser.add_argument('--lr', type=float, default=0.001, help='Learning rate')
-    train_parser.add_argument('--embed_dim', type=int, default=16, help='Embedding dimension')
-    train_parser.add_argument('--batch_size', type=int, default=200, help='Batch size')
-    train_parser.add_argument('--kernels', type=int, nargs='+', default=[9, 27, 40, 65], help='Kernel sizes')
-    train_parser.add_argument('--cnn_size', type=int, default=128, help='CNN size')
-    train_parser.add_argument('--rnn_size', type=int, default=64, help='RNN size')
-    train_parser.add_argument('--epochs', type=int, default=30, help='Number of epochs')
-    train_parser.add_argument('--output', type=str, default='mammad/', help='Output directory')
-    train_parser.add_argument('--train_data_path', type=str, required=True, help='Path to training data')
-    train_parser.add_argument('--val_data_path', type=str, required=True, help='Path to validation data')
-    train_parser.add_argument('--test_data_path', type=str, default=None, help='Path to test data')
-    train_parser.add_argument('--olab_data_path', type=str, default=None, help='Path to olab data')
-
-    train_parser.add_argument('--model_type', type=str, default='byte_rcnn', help='Type of model to use')
-    train_parser.add_argument('--model_path', type=str, default=None, help='Path to the saved model')
+    train_parser.add_argument('--config', type=str, required=True, help='Path to configuration file')
 
     eval_parser = subparsers.add_parser('evaluate')
-    eval_parser.add_argument('--scenario_to_run', type=int, default=1, help='Scenario to run')
-    eval_parser.add_argument('--maxlen', type=int, default=4096, help='Maximum length')
-    eval_parser.add_argument('--batch_size', type=int, default=200, help='Batch size')
-    eval_parser.add_argument('--output', type=str, default='mammad/', help='Output directory')
-    eval_parser.add_argument('--test_data_path', type=str, required=True, help='Path to test data')
-    eval_parser.add_argument('--model_path', type=str, required=True, help='Path to the saved model')
+    eval_parser.add_argument('--config', type=str, required=True, help='Path to configuration file')
 
     test_parser = subparsers.add_parser('test')
-    test_parser.add_argument('--scenario_to_run', type=int, default=1, help='Scenario to run')
-    test_parser.add_argument('--maxlen', type=int, default=4096, help='Maximum length')
-    test_parser.add_argument('--batch_size', type=int, default=200, help='Batch size')
-    test_parser.add_argument('--output', type=str, default='mammad/', help='Output directory')
-    test_parser.add_argument('--olab_data_path', type=str, required=True, help='Path to olab data')
-    test_parser.add_argument('--model_path', type=str, required=True, help='Path to the saved model')
+    test_parser.add_argument('--config', type=str, required=True, help='Path to configuration file')
 
     args = parser.parse_args()
 
-    trainer = ByteRCNNTrainer(args)
+    trainer = ModelTrainer(args)
 
     if args.command == 'train':
         trainer.train()

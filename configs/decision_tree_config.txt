@@ -1,0 +1,16 @@
+{
+    "scenario_to_run": 1,
+    "maxlen": 4096,
+    "batch_size": 200,
+    "output": "output/",
+    "train_data_path": "path/to/train/data",
+    "val_data_path": "path/to/val/data",
+    "test_data_path": "path/to/test/data",
+    "olab_data_path": "path/to/olab/data",
+    "model_type": "decision_tree",
+    "criterion": "gini",  // "gini" for Gini impurity or "entropy" for information gain
+    "splitter": "best",   // "best" for best split or "random" for random split
+    "max_depth": null,    // The maximum depth of the tree, or null for unlimited depth
+    "min_samples_split": 2,  // The minimum number of samples required to split an internal node
+    "min_samples_leaf": 1    // The minimum number of samples required to be at a leaf node
+}
