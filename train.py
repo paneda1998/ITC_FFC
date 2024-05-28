@@ -14,18 +14,15 @@ from sklearn_models import decision_tree_model, random_forest_model, simple_cnn_
 from utility import acc_calc
 from config_parser import parse_config
 
-class ModelTrainer:
+class Trainer:
     def __init__(self, args):
         config = parse_config(args.config)
+        self.model_type = config['model_type']
+
+        # Load common configurations
         self.scenario_to_run = config['scenario_to_run']
         self.maxlen = config['maxlen']
-        self.lr = config['lr']
-        self.embed_dim = config['embed_dim']
         self.batch_size = config['batch_size']
-        self.kernels = config['kernels']
-        self.cnn_size = config['cnn_size']
-        self.rnn_size = config['rnn_size']
-        self.epochs = config['epochs']
         self.output = config['output']
         self.train_data_path = config['train_data_path']
         self.val_data_path = config['val_data_path']
@@ -34,16 +31,66 @@ class ModelTrainer:
         self.model_type = config['model_type']
         self._create_output_dir()
 
+        # Load model-specific configurations
+        if self.model_type == 'byte_rcnn':
+            self.lr = config['lr']
+            self.embed_dim = config['embed_dim']
+            self.kernels = config['kernels']
+            self.cnn_size = config['cnn_size']
+            self.rnn_size = config['rnn_size']
+            self.epochs = config['epochs']
+        elif self.model_type == 'decision_tree':
+            self.criterion = config['criterion']
+            self.splitter = config['splitter']
+            self.max_depth = config['max_depth']
+            self.min_samples_split = config['min_samples_split']
+            self.min_samples_leaf = config['min_samples_leaf']
+        elif self.model_type == 'random_forest':
+            self.n_estimators = config['n_estimators']
+            self.criterion = config['criterion']
+            self.max_depth = config['max_depth']
+            self.min_samples_split = config['min_samples_split']
+            self.min_samples_leaf = config['min_samples_leaf']
+        elif self.model_type == 'simple_cnn':
+            self.lr = config['lr']
+            self.embed_dim = config['embed_dim']
+            self.epochs = config['epochs']
+        else:
+            raise ValueError(f"Unsupported model type: {self.model_type}")
+
     def _create_output_dir(self):
         if not os.path.exists(self.output):
             os.makedirs(self.output)
 
     def _get_model(self):
         if self.model_type == 'byte_rcnn':
-            return byte_rcnn_model(self.maxlen, self.embed_dim, self.rnn_size, self.cnn_size, self.kernels, 75,
-                                   self.output, self.lr)
+            return byte_rcnn_model(self.maxlen, self.embed_dim, self.rnn_size, self.cnn_size, self.kernels, 75, self.output, self.lr)
         elif self.model_type == 'decision_tree':
-            return DecisionTreeClassifier(
+            return decision_tree_model(
+                criterion=self.criterion,
+                splitter=self.splitter,
+                max_depth=self.max_depth,
+                min_samples_split=self.min_samples_split,
+                min_samples_leaf=self.min_samples_leaf
+            )
+        elif self.model_type == 'random_forest':
+            return random_forest_model(
+                n_estimators=self.n_estimators,
+                criterion=self.criterion,
+                max_depth=self.max_depth,
+                min_samples_split=self.min_samples_split,
+                min_samples_leaf=self.min_samples_leaf
+            )
+        elif self.model_type == 'simple_cnn':
+            return simple_cnn_model((self.maxlen, self.embed_dim, 1), 75)
+        else:
+            raise ValueError(f"Unsupported model type: {self.model_type}")
+
+    def _get_model(self):
+        if self.model_type == 'byte_rcnn':
+            return byte_rcnn_model(self.maxlen, self.embed_dim, self.rnn_size, self.cnn_size, self.kernels, 75, self.output, self.lr)
+        elif self.model_type == 'decision_tree':
+            return decision_tree_model(
                 criterion=self.args.criterion,
                 splitter=self.args.splitter,
                 max_depth=self.args.max_depth,
@@ -51,7 +98,7 @@ class ModelTrainer:
                 min_samples_leaf=self.args.min_samples_leaf
             )
         elif self.model_type == 'random_forest':
-            return RandomForestClassifier(
+            return random_forest_model(
                 n_estimators=self.args.n_estimators,
                 criterion=self.args.criterion,
                 max_depth=self.args.max_depth,
@@ -148,21 +195,24 @@ class ModelTrainer:
         model.save(self.output + f'_model_len{self.maxlen}_sc{self.scenario_to_run}_model_save')
 
 def main():
-    parser = argparse.ArgumentParser(description="Train, Evaluate, or Test Model")
+    parser = argparse.ArgumentParser(description="Train, Evaluate, or Test ByteRCNN Model")
     subparsers = parser.add_subparsers(dest='command')
 
     train_parser = subparsers.add_parser('train')
-    train_parser.add_argument('--config', type=str, required=True, help='Path to configuration file')
+    train_parser.add_argument('--config', type=str, required=True, help='Path to the configuration file')
 
     eval_parser = subparsers.add_parser('evaluate')
-    eval_parser.add_argument('--config', type=str, required=True, help='Path to configuration file')
+    eval_parser.add_argument('--config', type=str, required=True, help='Path to the configuration file')
 
     test_parser = subparsers.add_parser('test')
-    test_parser.add_argument('--config', type=str, required=True, help='Path to configuration file')
+    test_parser.add_argument('--config', type=str, required=True, help='Path to the configuration file')
 
     args = parser.parse_args()
 
-    trainer = ModelTrainer(args)
+    # Load parameters from config file
+    config = parse_config(args.config)
+
+    trainer = Trainer(args)
 
     if args.command == 'train':
         trainer.train()

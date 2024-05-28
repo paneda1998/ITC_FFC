@@ -2,11 +2,11 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from tensorflow.keras import layers, models
 
-def decision_tree_model():
-    return DecisionTreeClassifier()
+def decision_tree_model(splitter, criterion, max_depth, min_samples_split, min_samples_leaf):
+    return DecisionTreeClassifier(splitter=splitter, criterion=criterion, max_depth=max_depth, min_samples_split=min_samples_split, min_samples_leaf=min_samples_leaf)
 
-def random_forest_model():
-    return RandomForestClassifier()
+def random_forest_model(n_estimators, criterion, max_depth, min_samples_split, min_samples_leaf):
+    return RandomForestClassifier(n_estimators=n_estimators, criterion=criterion, max_depth=max_depth, min_samples_split=min_samples_split, min_samples_leaf=min_samples_leaf)
 
 def simple_cnn_model(input_shape, num_classes):
     model = models.Sequential()
