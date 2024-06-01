@@ -19,6 +19,7 @@ def acc_calc(row):
         return 0
 
 def npz_to_csv(npz_file_path, csv_save_path):
+    
     # Load the NPZ file
     with np.load(npz_file_path) as data:
         array = data['data']  # Make sure to use the correct key
@@ -28,8 +29,6 @@ def npz_to_csv(npz_file_path, csv_save_path):
 
     # Save the DataFrame to a CSV file
     df.to_csv(save_path, index=False)
-    
-    return 1
 
 def csv_to_npz(csv_file_path, npz_save_path):
     
@@ -41,5 +40,3 @@ def csv_to_npz(csv_file_path, npz_save_path):
     
     # Save the NumPy array to an NPZ file
     np.savez(npz_save_path, data=data)
-    
-    return 1
