@@ -1,17 +1,14 @@
 
-# ByteRCNN Model for Classification
+# ITC_FFC
 
-This project implements a Byte-level Recurrent Convolutional Neural Network (ByteRCNN) for classification tasks using TensorFlow and Keras. The model combines RNN and CNN layers to effectively process sequential data. This repository includes scripts for training, evaluating, and testing the model, along with data loaders and utility functions.
+## Overview
 
-## Table of Contents
-- [Requirements](#requirements)
-- [Installation](#installation)
-- [Usage](#usage)
-  - [Training](#training)
-  - [Evaluation](#evaluation)
-  - [Testing](#testing)
-- [Project Structure](#project-structure)
-- [License](#license)
+This repository contains code for training, testing, and cross-validating deep learning and machine learning models on various datasets. The supported models include:
+- Byte RCNN
+- Decision Tree
+- Random Forest
+
+
 
 ## Requirements
 
@@ -39,86 +36,98 @@ This project implements a Byte-level Recurrent Convolutional Neural Network (Byt
 
 ## Usage
 
-### GUI
-simply run:
+### Configuration
+Before running the scripts, ensure you have a configuration file for your model. Below is an example configuration file for a Byte RCNN model:
 ```
-python gui.py
+{
+  "model_type": "byte_rcnn",
+  "scenario_to_run": "scenario_1",
+  "maxlen": 100,
+  "batch_size": 32,
+  "output": "output_dir",
+  "train_data_path": "path/to/train_data",
+  "val_data_path": "path/to/val_data",
+  "test_data_path": "path/to/test_data",
+  "olab_data_path": "path/to/olab_data",
+  "lr": 0.001,
+  "embed_dim": 128,
+  "kernels": [3, 4, 5],
+  "cnn_size": 64,
+  "rnn_size": 128,
+  "epochs": 10,
+  "checkpoint_dir": "path/to/checkpoints",
+  "k_folds": 5
+}
+
 ```
 
-Or you can run everything manually
 ### Training
 
-To train the ByteRCNN model, use the \`train\` command. You need to specify the paths to your training and validation datasets, along with other hyperparameters.
-
+To train a model, use the following command:
 ```sh
-python train.py train \
-  --train_data_path "path/to/train_data.h5" \
-  --val_data_path "path/to/val_data.h5" \
-  --scenario_to_run 1 \
-  --maxlen 4096 \
-  --lr 0.001 \
-  --embed_dim 16 \
-  --batch_size 200 \
-  --kernels 9 27 40 65 \
-  --cnn_size 128 \
-  --rnn_size 64 \
-  --epochs 30 \
-  --model_type "byte_rcnn"\
-  --output "output_directory/"
+python train.py train path/to/config.json
 ```
 
-### Evaluation
-
-To evaluate a trained model on a test dataset, use the \`evaluate\` command. Specify the path to the test dataset and the saved model.
-
-```sh
-python train.py evaluate \
-  --test_data_path "path/to/test_data.h5" \
-  --scenario_to_run 1 \
-  --maxlen 4096 \
-  --batch_size 200 \
-  --model_type "byte_rcnn"\
-  --output "output_directory/" \
-  --model_path "path/to/saved_model"
-```
 
 ### Testing
 
-To test the model on an additional dataset (e.g., OLAB dataset), use the \`test\` command. Specify the path to the OLAB dataset and the saved model.
+To test a trained model, use the following command:
+
 
 ```sh
-python train.py test \
-  --olab_data_path "path/to/olab_data/" \
-  --scenario_to_run 1 \
-  --maxlen 4096 \
-  --batch_size 200 \
-  --model_type "byte_rcnn"\
-  --output "output_directory/" \
-  --model_path "path/to/saved_model"
+python train.py test path/to/config.json
 ```
 
-## Project Structure
+### Cross-Validation
 
-```
-byttercnn/
-│
-├── bytercnn_models.py        # Contains the ByteRCNN model definition
-├── data_loader.py            # Data loader and generator classes
-├── train.py                  # Main script to train, evaluate, and test the model
-├── utility.py                # Utility functions
-├── requirements.txt          # List of required Python packages
-└── README.md                 # This README file
+
+To perform k-fold cross-validation, use the following command:
+
+```sh
+python train.py cross_validate path/to/config.json
 ```
 
-### bytercnn_models.py
-Defines the ByteRCNN model and a function to load the model.
+## Explanation of Configuration Parameters
+- model_type: The type of model to train (byte_rcnn, decision_tree, random_forest).
+- scenario_to_run: A scenario identifier for the current run.
+- maxlen: Maximum length of input sequences (specific to Byte RCNN).
+- batch_size: Batch size for training.
+- output: Directory to save model outputs and reports.
+- train_data_path: Path to the training data.
+- val_data_path: Path to the validation data.
+- test_data_path: Path to the test data.
+- olab_data_path: Path to any additional data (specific to Byte RCNN).
+- lr: Learning rate (specific to Byte RCNN).
+- embed_dim: Embedding dimension (specific to Byte RCNN).
+- kernels: List of kernel sizes for convolutional layers (specific to Byte RCNN).
+- cnn_size: Number of filters in convolutional layers (specific to Byte RCNN).
+- rnn_size: Number of units in recurrent layers (specific to Byte RCNN).
+- epochs: Number of epochs for training.
+- checkpoint_dir: Directory to save checkpoints during training.
+- k_folds: Number of folds for k-fold cross-validation.
 
-### data_loader.py
-Contains the \`NPZBatchGenerator\` class for loading batches of data and the \`ByteRCNNDataLoader\` class for handling different data formats.
+## Output
+During training and testing, the following files will be generated in the output directory:
 
-### train.py
-Main script to handle training, evaluation, and testing of the ByteRCNN model.
+- byte_rcnn_model.h5: Trained Byte RCNN model (for Byte RCNN).
+- decision_tree_model.pkl: Trained Decision Tree model (for Decision Tree).
+- random_forest_model.pkl: Trained Random Forest model (for Random Forest).
+- classification_report.csv: Classification report.
+- confusion_matrix.csv: Confusion matrix.
 
-### utility.py
-Includes utility functions such as converting data formats and calculating accuracy.
+
+For cross-validation, additional files for each fold will be generated:
+
+- byte_rcnn_model_foldX.h5: Trained Byte RCNN model for fold X.
+- classification_report_foldX.csv: Classification report for fold X.
+- confusion_matrix_foldX.csv: Confusion matrix for fold X.
+
+## License
+This project is licensed under the MIT License. See the LICENSE file for details.
+
+## Contributing
+Contributions are welcome! Please open an issue or submit a pull request.
+
+## Contact
+For questions or comments, please contact baneshi.alireza@gmail.com.
 
