@@ -68,9 +68,9 @@ class Trainer:
     def _load_data(self):
         # Load and prepare data based on the configuration
         if self.model_type == 'byte_rcnn':
-            self.data_loader = ByteRCNNDataLoader(self.train_data_path, self.val_data_path, self.test_data_path,
-                                                  self.olab_data_path, self.batch_size, self.maxlen)
-            self.train_generator, self.val_generator, self.test_generator = self.data_loader.load_data()
+            self.train_generator = NPZBatchGenerator(self.train_data_path, self.batch_size)
+            self.val_generator = NPZBatchGenerator(self.val_data_path, self.batch_size)
+            self.test_generator = NPZBatchGenerator(self.test_data_path, self.batch_size)
         else:
             self.train_data = pd.read_csv(self.train_data_path)
             self.val_data = pd.read_csv(self.val_data_path)
