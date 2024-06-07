@@ -14,5 +14,6 @@
     "test_data_path": "path/to/test/data",
     "olab_data_path": "path/to/olab/data",
     "model_type": "byte_rcnn",
-    "checkpoint_dir": "path/to/checkpoints"
+    "checkpoint_dir": "path/to/checkpoints",
+    "k_folds": 5
 }

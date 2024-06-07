@@ -5,7 +5,7 @@ import pandas as pd
 from tensorflow import keras
 from tensorflow.keras.callbacks import ModelCheckpoint
 from sklearn.metrics import classification_report, confusion_matrix
-from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import KFold, cross_val_score
 import matplotlib.pyplot as plt
 import numpy as np
 import pickle
@@ -37,6 +37,7 @@ class Trainer:
         self.test_data_path = config['test_data_path']
         self.olab_data_path = config['olab_data_path']
         self.checkpoint_dir = config.get('checkpoint_dir', self.output)
+        self.k_folds = config.get('k_folds', 5)
 
     def _load_model_specific_config(self):
         config = self.config
@@ -162,38 +163,92 @@ class Trainer:
 
     def cross_validate(self):
         self._load_data()
-        if self.model_type == 'decision_tree':
+        if self.model_type == 'byte_rcnn':
+            self._cross_validate_byte_rcnn()
+        elif self.model_type == 'decision_tree':
             self._cross_validate_decision_tree()
         elif self.model_type == 'random_forest':
             self._cross_validate_random_forest()
+
+    def _cross_validate_byte_rcnn(self):
+        data = np.load(self.train_data_path)
+        X = data['X']
+        y = data['y']
+        kfold = KFold(n_splits=self.k_folds, shuffle=True)
+
+        fold_no = 1
+        for train, test in kfold.split(X, y):
+            model = byte_rcnn_model(self.maxlen, self.embed_dim, self.kernels, self.cnn_size, self.rnn_size)
+            checkpoint_path = os.path.join(self.checkpoint_dir, f'byte_rcnn_checkpoint_fold{fold_no}.h5')
+
+            if os.path.exists(checkpoint_path):
+                model.load_weights(checkpoint_path)
+
+            checkpoint_callback = ModelCheckpoint(filepath=checkpoint_path, save_weights_only=True, save_best_only=True,
+                                                  verbose=1)
+
+            model.compile(optimizer=keras.optimizers.Adam(learning_rate=self.lr), loss='categorical_crossentropy',
+                          metrics=['accuracy'])
+            model.fit(X[train], y[train], epochs=self.epochs, validation_data=(X[test], y[test]),
+                      callbacks=[checkpoint_callback])
+            model.save(os.path.join(self.output, f'byte_rcnn_model_fold{fold_no}.h5'))
+
+            y_pred = model.predict(X[test])
+            y_true_classes = np.argmax(y[test], axis=1)
+            y_pred_classes = np.argmax(y_pred, axis=1)
+
+            self._generate_classification_report(y_true_classes, y_pred_classes, fold_no)
+            self._generate_confusion_matrix(y_true_classes, y_pred_classes, fold_no)
+
+            fold_no += 1
 
     def _cross_validate_decision_tree(self):
         model = decision_tree_model(self.criterion, self.splitter, self.max_depth, self.min_samples_split,
                                     self.min_samples_leaf)
         X = self.train_data.drop('label', axis=1)
         y = self.train_data['label']
-        scores = cross_val_score(model, X, y, cv=5)
-        print(f'Cross-Validation Scores: {scores}')
-        print(f'Mean CV Score: {np.mean(scores)}')
+        kfold = KFold(n_splits=self.k_folds, shuffle=True)
+
+        fold_no = 1
+        for train, test in kfold.split(X, y):
+            model.fit(X.iloc[train], y.iloc[train])
+            y_pred = model.predict(X.iloc[test])
+            y_true = y.iloc[test]
+
+            self._generate_classification_report(y_true, y_pred, fold_no)
+            self._generate_confusion_matrix(y_true, y_pred, fold_no)
+
+            fold_no += 1
 
     def _cross_validate_random_forest(self):
         model = random_forest_model(self.n_estimators, self.criterion, self.max_depth)
         X = self.train_data.drop('label', axis=1)
         y = self.train_data['label']
-        scores = cross_val_score(model, X, y, cv=5)
-        print(f'Cross-Validation Scores: {scores}')
-        print(f'Mean CV Score: {np.mean(scores)}')
+        kfold = KFold(n_splits=self.k_folds, shuffle=True)
 
-    def _generate_classification_report(self, y_true, y_pred):
+        fold_no = 1
+        for train, test in kfold.split(X, y):
+            model.fit(X.iloc[train], y.iloc[train])
+            y_pred = model.predict(X.iloc[test])
+            y_true = y.iloc[test]
+
+            self._generate_classification_report(y_true, y_pred, fold_no)
+            self._generate_confusion_matrix(y_true, y_pred, fold_no)
+
+            fold_no += 1
+
+    def _generate_classification_report(self, y_true, y_pred, fold_no=None):
         report = classification_report(y_true, y_pred, output_dict=True)
         report_df = pd.DataFrame(report).transpose()
-        report_path = os.path.join(self.output, 'classification_report.csv')
+        report_path = os.path.join(self.output,
+                                   f'classification_report_fold{fold_no}.csv' if fold_no else 'classification_report.csv')
         report_df.to_csv(report_path, index=True)
         print(f'Classification report saved to {report_path}')
 
-    def _generate_confusion_matrix(self, y_true, y_pred):
+    def _generate_confusion_matrix(self, y_true, y_pred, fold_no=None):
         matrix = confusion_matrix(y_true, y_pred)
-        matrix_path = os.path.join(self.output, 'confusion_matrix.csv')
+        matrix_path = os.path.join(self.output,
+                                   f'confusion_matrix_fold{fold_no}.csv' if fold_no else 'confusion_matrix.csv')
         np.savetxt(matrix_path, matrix, delimiter=",")
         print(f'Confusion matrix saved to {matrix_path}')
 
