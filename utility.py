@@ -41,12 +41,32 @@ def csv_to_npz(csv_file_path, npz_save_path):
     # Save the NumPy array to an NPZ file
     np.savez(npz_save_path, data=data)
 
-def process_dataset(csv_file, shuffle = False, select_features = None, select_classes = None, output_format = 'npz'):
+
+from scipy.io import savemat
+
+#Dataset different version reading and saving is not completed yet!!!
+
+#merging nested lists
+
+#why 100 is not working!
+
+#modular: df begir df khorooji bede
+
+# func e joda bezan baraye tabdil
+
+def process_dataset(df, merge_lables = None, merging_value = None, shuffle = False, select_features = None, 
+                    select_classes = None, output_format = 'npz'):
     
-    # Load the CSV file into a DataFrame
-    df = pd.read_csv(csv_file)
     
-    # Select only specified features and classes
+    # merging all labels (or class names/values) with a given value
+    
+    # we assumed that merging_values is given as a list and they are going to be replaced with a specific value 
+    # named merging value
+    
+    if merging_value and merging_value:
+        df[df.columns[-1]] = df[df.columns[-1]].replace(merge_lables, merging_value)
+
+        # Select only specified features and classes
     if select_features:
         select_features.append(df.columns[-1])
         df = df[select_features]
@@ -64,9 +84,10 @@ def process_dataset(csv_file, shuffle = False, select_features = None, select_cl
     # Saving column names for further creating files
     columns_name = df.columns.to_numpy()
     
+    
     if output_format == 'npz':
         
-        # Reshape arr1 to (1, len(features)) so it can be stacked as a row
+        # Reshape columns_name to (1, len(features)) so it can be stacked as a row
         columns_name_reshaped = columns_name.reshape(1, len(columns_name))
     
         # Stack arr1_reshaped on top of arr2
@@ -77,10 +98,12 @@ def process_dataset(csv_file, shuffle = False, select_features = None, select_cl
         
         print("Data saved as output.npz")
         
+    #should be checked    
     elif output_format == 'mat':
         savemat('output.mat', {'data': data})
         print("Data saved as output.mat")
         
+    #should be checked    
     elif output_format == 'dat':
         data.tofile('output.dat')
         print("Data saved as output.dat")
@@ -114,3 +137,11 @@ def read_npz(npz_path):
     df.drop(df.index[0], inplace = True)
 
     return df
+
+def concat(df1, df2):
+    
+    frames = [df1,df2]
+    
+    result = pd.concat(frames)
+    
+    return result
