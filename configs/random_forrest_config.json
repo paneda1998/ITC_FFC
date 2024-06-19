@@ -1,19 +1,16 @@
 {
     "scenario_to_run": 1,
     "maxlen": 4096,
-    "lr": 0.001,
-    "embed_dim": 16,
     "batch_size": 200,
-    "kernels": [9, 27, 40, 65],
-    "cnn_size": 128,
-    "rnn_size": 64,
-    "epochs": 30,
     "output": "output/",
     "train_data_path": "path/to/train/data",
     "val_data_path": "path/to/val/data",
     "test_data_path": "path/to/test/data",
     "olab_data_path": "path/to/olab/data",
-    "model_type": "byte_rcnn",
-    "checkpoint_dir": "path/to/checkpoints",
-    "k_folds": 5
+    "model_type": "random_forest",
+    "n_estimators": 100,
+    "criterion": "gini",
+    "max_depth": null,
+    "min_samples_split": 2,
+    "min_samples_leaf": 1
 }
