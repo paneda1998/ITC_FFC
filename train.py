@@ -103,18 +103,18 @@ class Trainer:
         model.save(os.path.join(self.output, 'byte_rcnn_model.h5'))
 
     def _train_decision_tree(self):
-        model = decision_tree_model(self.criterion, self.splitter, self.max_depth, self.min_samples_split,
-                                    self.min_samples_leaf)
-        X_train = self.train_data.drop('label', axis=1)
-        y_train = self.train_data['label']
+        model = decision_tree_model(criterion=self.criterion, splitter=self.splitter, max_depth=self.max_depth, min_samples_split=self.min_samples_split,
+                                    min_samples_leaf=self.min_samples_leaf)
+        X_train = self.train_data.iloc[:, :-1]
+        y_train = self.train_data.iloc[:, -1]
         model.fit(X_train, y_train)
         with open(os.path.join(self.output, 'decision_tree_model.pkl'), 'wb') as f:
             pickle.dump(model, f)
 
     def _train_random_forest(self):
-        model = random_forest_model(self.n_estimators, self.criterion, self.max_depth)
-        X_train = self.train_data.drop('label', axis=1)
-        y_train = self.train_data['label']
+        model = random_forest_model(n_estimators=self.n_estimators, criterion=self.criterion, max_depth=self.max_depth)
+        X_train = self.train_data.iloc[:, :-1]
+        y_train = self.train_data.iloc[:, -1]
         model.fit(X_train, y_train)
         with open(os.path.join(self.output, 'random_forest_model.pkl'), 'wb') as f:
             pickle.dump(model, f)
@@ -144,8 +144,8 @@ class Trainer:
     def _test_decision_tree(self):
         with open(os.path.join(self.output, 'decision_tree_model.pkl'), 'rb') as f:
             model = pickle.load(f)
-        X_test = self.test_data.drop('label', axis=1)
-        y_test = self.test_data['label']
+        X_test = self.test_data.iloc[:, :-1]
+        y_test = self.test_data.iloc[:, -1]
         y_pred = model.predict(X_test)
 
         self._generate_classification_report(y_test, y_pred)
@@ -154,8 +154,8 @@ class Trainer:
     def _test_random_forest(self):
         with open(os.path.join(self.output, 'random_forest_model.pkl'), 'rb') as f:
             model = pickle.load(f)
-        X_test = self.test_data.drop('label', axis=1)
-        y_test = self.test_data['label']
+        X_test = self.test_data.iloc[:, :-1]
+        y_test = self.test_data.iloc[:, -1]
         y_pred = model.predict(X_test)
 
         self._generate_classification_report(y_test, y_pred)
@@ -205,8 +205,8 @@ class Trainer:
     def _cross_validate_decision_tree(self):
         model = decision_tree_model(self.criterion, self.splitter, self.max_depth, self.min_samples_split,
                                     self.min_samples_leaf)
-        X = self.train_data.drop('label', axis=1)
-        y = self.train_data['label']
+        X = self.train_data.iloc[:, :-1]
+        y = self.train_data.iloc[:, -1]
         kfold = KFold(n_splits=self.k_folds, shuffle=True)
 
         fold_no = 1
@@ -222,8 +222,8 @@ class Trainer:
 
     def _cross_validate_random_forest(self):
         model = random_forest_model(self.n_estimators, self.criterion, self.max_depth)
-        X = self.train_data.drop('label', axis=1)
-        y = self.train_data['label']
+        X = self.train_data.iloc[:, :-1]
+        y = self.train_data.iloc[:, -1]
         kfold = KFold(n_splits=self.k_folds, shuffle=True)
 
         fold_no = 1
